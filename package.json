@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build:fresh-agenda": "npm run update-agenda && npm run build",
+    "install:playwright": "playwright install chromium",
+    "preview": "vite preview",
+    "update-agenda": "node scripts/update-agenda.mjs"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "playwright": "^1.59.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.10",
     "vite-plugin-pwa": "^1.3.0"

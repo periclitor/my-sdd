@@ -76,6 +76,17 @@ select {
   gap: 12px;
 }
 
+.mantine-Paper-root,
+.mantine-Card-root,
+.mantine-Button-root,
+.mantine-SegmentedControl-root,
+.mantine-Badge-root,
+.mantine-ActionIcon-root,
+.mantine-ThemeIcon-root,
+.mantine-Chip-root {
+  border-radius: 6px;
+}
+
 .hero-title,
 .section-heading {
   font-family: 'Space Grotesk', Arial, sans-serif;
@@ -120,6 +131,25 @@ select {
 .session-title {
   line-height: 1.2;
   text-wrap: balance;
+}
+
+.session-title-toggle {
+  cursor: pointer;
+}
+
+.session-title-toggle:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.14em;
+}
+
+.session-details {
+  border-top: 1px solid rgba(20, 24, 29, 0.08);
+  padding-top: 10px;
+}
+
+.rating-badge {
+  opacity: 0.82;
 }
 
 .slot-time {
@@ -174,5 +204,9 @@ select {
 
   .toolbar-row {
     align-items: flex-start;
+  }
+
+  .toolbar-row > div:last-child {
+    width: 100%;
   }
 }

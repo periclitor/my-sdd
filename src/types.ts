@@ -26,3 +26,9 @@ export interface AgendaSession {
   codeLevel?: number;
   advancedLevel?: number;
 }
+
+export interface AgendaData {
+  sourceUrl: string;
+  extractedAt: string;
+  sessions: AgendaSession[];
+}

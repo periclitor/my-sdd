@@ -1,9 +1,9 @@
 import {
-  Accordion,
   ActionIcon,
   Badge,
   Button,
   Card,
+  Collapse,
   Chip,
   Container,
   Group,
@@ -18,6 +18,8 @@ import {
 } from '@mantine/core';
 import {
   IconCalendarEvent,
+  IconChevronDown,
+  IconChevronUp,
   IconCheck,
   IconCoffee,
   IconFilter,
@@ -26,11 +28,14 @@ import {
 } from '@tabler/icons-react';
 import { useLocalStorage } from '@mantine/hooks';
 import dayjs from 'dayjs';
-import { useMemo, useState } from 'react';
-import { agendaSessions, trackMeta } from './data/agenda';
-import type { AgendaSession } from './types';
+import { useEffect, useMemo, useState } from 'react';
+import fallbackAgenda from './data/agenda.json';
+import { trackMeta } from './data/tracks';
+import { agendaSourceUrl } from './lib/agenda-parser';
+import type { AgendaData, AgendaSession, TrackId } from './types';
 
 const selectionStorageKey = 'sdd-planner:selected-sessions';
+const fallbackAgendaData = fallbackAgenda as AgendaData;
 
 function formatDayLabel(date: string) {
   return dayjs(date).format('ddd D MMM');
@@ -38,6 +43,10 @@ function formatDayLabel(date: string) {
 
 function formatDayHeading(date: string) {
   return dayjs(date).format('dddd D MMMM');
+}
+
+function formatUpdatedAt(date: string) {
+  return dayjs(date).format('D MMM YYYY HH:mm');
 }
 
 function timeRange(session: AgendaSession) {
@@ -70,21 +79,36 @@ export default function App() {
     key: selectionStorageKey,
     defaultValue: [],
   });
+  const agendaData: AgendaData = fallbackAgendaData;
+  const agendaSessions = agendaData.sessions;
+  const trackEntries = useMemo(
+    () => Object.entries(trackMeta) as Array<[TrackId, (typeof trackMeta)[TrackId]]>,
+    [],
+  );
+
   const [day, setDay] = useState<string>(agendaSessions[0]?.date ?? '');
   const [showOnlySelected, setShowOnlySelected] = useState(false);
   const [trackFilter, setTrackFilter] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([]);
 
   const agendaDays = useMemo(
     () => Array.from(new Set(agendaSessions.map((session) => session.date))),
-    [],
+    [agendaSessions],
   );
+
+  useEffect(() => {
+    if (agendaDays.length > 0 && !agendaDays.includes(day)) {
+      setDay(agendaDays[0]);
+    }
+  }, [agendaDays, day]);
 
   const selectedSessions = useMemo(
     () =>
       agendaSessions
         .filter((session) => selectedIds.includes(session.id))
         .sort(compareSessions),
-    [selectedIds],
+    [agendaSessions, selectedIds],
   );
 
   const visibleSessions = useMemo(() => {
@@ -103,7 +127,7 @@ export default function App() {
 
       return true;
     });
-  }, [day, selectedIds, showOnlySelected, trackFilter]);
+  }, [agendaSessions, day, selectedIds, showOnlySelected, trackFilter]);
 
   const slots = useMemo(() => {
     const grouped = groupByTime(visibleSessions);
@@ -122,19 +146,27 @@ export default function App() {
     );
   };
 
+  const toggleExpanded = (sessionId: string) => {
+    setExpandedSessionIds((current) =>
+      current.includes(sessionId)
+        ? current.filter((id) => id !== sessionId)
+        : [...current, sessionId],
+    );
+  };
+
   return (
     <div className="app-shell">
       <Container size="lg" className="page-shell">
         <Stack gap="xl">
-          <Paper radius="xl" className="hero-panel">
+          <Paper radius="sm" className="hero-panel">
             <div className="hero-backdrop" />
             <Stack gap="lg" className="hero-content">
               <Group justify="space-between" align="flex-start" className="hero-topline">
-                <Badge size="lg" radius="sm" variant="light" color="orange">
+                <Badge size="lg" radius={4} variant="light" color="orange">
                   SDD agenda planner
                 </Badge>
                 <Group gap="xs">
-                  <ThemeIcon radius="xl" size="lg" variant="light" color="orange">
+                  <ThemeIcon radius={6} size="lg" variant="light" color="orange">
                     <IconCalendarEvent size={18} />
                   </ThemeIcon>
                   <Text className="hero-meta">Mobile first, saved on this device</Text>
@@ -148,6 +180,9 @@ export default function App() {
                 <Text className="hero-copy">
                   Browse the real SDD 2026 schedule across numbered tracks, keynote, and
                   workshop days, then keep your shortlist in local storage on this device.
+                </Text>
+                <Text size="sm" c="dimmed" mt="sm">
+                  {`Using the bundled agenda snapshot from ${formatUpdatedAt(agendaData.extractedAt)}. Source: ${agendaSourceUrl}.`}
                 </Text>
               </div>
 
@@ -168,7 +203,7 @@ export default function App() {
             </Stack>
           </Paper>
 
-          <Paper radius="xl" p="md" className="toolbar-panel">
+          <Paper radius="sm" p="md" className="toolbar-panel">
             <Stack gap="md">
               <Group justify="space-between" align="center" className="toolbar-row">
                 <div>
@@ -177,51 +212,68 @@ export default function App() {
                     Swap quickly between the full agenda and your personal plan.
                   </Text>
                 </div>
-                <Switch
-                  checked={showOnlySelected}
-                  onChange={(event) => setShowOnlySelected(event.currentTarget.checked)}
-                  label="Only my picks"
-                  color="orange"
-                />
+                <Group gap="sm">
+                  <Button
+                    variant="subtle"
+                    color="dark"
+                    radius="sm"
+                    onClick={() => setShowFilters((current) => !current)}
+                    rightSection={
+                      showFilters ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />
+                    }
+                  >
+                    {showFilters ? 'Hide day chooser' : 'Show day chooser'}
+                  </Button>
+                  <Switch
+                    checked={showOnlySelected}
+                    onChange={(event) => setShowOnlySelected(event.currentTarget.checked)}
+                    label="Only my picks"
+                    color="orange"
+                  />
+                </Group>
               </Group>
 
-              <SegmentedControl
-                fullWidth
-                radius="xl"
-                color="dark"
-                value={day}
-                onChange={setDay}
-                data={agendaDays.map((date) => ({
-                  label: formatDayLabel(date),
-                  value: date,
-                }))}
-              />
+              <Collapse expanded={showFilters}>
+                <Stack gap="md">
+                  <SegmentedControl
+                    fullWidth
+                    radius="sm"
+                    color="dark"
+                    value={day}
+                    onChange={setDay}
+                    data={agendaDays.map((date) => ({
+                      label: formatDayLabel(date),
+                      value: date,
+                    }))}
+                  />
 
-              <div>
-                <Group gap="xs" mb="xs">
-                  <ThemeIcon size="sm" radius="xl" variant="light" color="orange">
-                    <IconFilter size={14} />
-                  </ThemeIcon>
-                  <Text fw={600} size="sm">
-                    Track filter
-                  </Text>
-                </Group>
-                <Chip.Group multiple value={trackFilter} onChange={setTrackFilter}>
-                  <Group gap="xs">
-                    {Object.entries(trackMeta)
-                      .filter(([track]) => track !== 'shared')
-                      .map(([track, meta]) => (
-                        <Chip key={track} value={track} color="dark" radius="xl">
-                          {meta.label}
-                        </Chip>
-                      ))}
-                  </Group>
-                </Chip.Group>
-              </div>
+                  <div>
+                    <Group gap="xs" mb="xs">
+                      <ThemeIcon size="sm" radius={6} variant="light" color="orange">
+                        <IconFilter size={14} />
+                      </ThemeIcon>
+                      <Text fw={600} size="sm">
+                        Track filter
+                      </Text>
+                    </Group>
+                    <Chip.Group multiple value={trackFilter} onChange={setTrackFilter}>
+                      <Group gap="xs">
+                        {trackEntries
+                          .filter(([track]) => track !== 'shared')
+                          .map(([track, meta]) => (
+                            <Chip key={track} value={track} color="dark" radius="sm">
+                              {meta.label}
+                            </Chip>
+                          ))}
+                      </Group>
+                    </Chip.Group>
+                  </div>
+                </Stack>
+              </Collapse>
             </Stack>
           </Paper>
 
-          <Paper radius="xl" p="md" className="selection-panel">
+          <Paper radius="sm" p="md" className="selection-panel">
             <Group justify="space-between" align="flex-start">
               <div>
                 <Text fw={800} size="lg">
@@ -231,13 +283,13 @@ export default function App() {
                   Your saved choices stay on this device. Use them as a quick focus view.
                 </Text>
               </div>
-              <Badge color="dark" radius="sm" variant="filled">
+              <Badge color="dark" radius={4} variant="filled">
                 {selectedSessions.length} saved
               </Badge>
             </Group>
 
             {selectedSessions.length === 0 ? (
-              <Paper radius="lg" p="lg" className="empty-state">
+              <Paper radius="sm" p="lg" className="empty-state">
                 <Text fw={700}>No talks selected yet</Text>
                 <Text size="sm" c="dimmed">
                   Tap the star on any session to build your own schedule.
@@ -252,14 +304,14 @@ export default function App() {
                     </Text>
                     <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm">
                       {sessions.map((session) => (
-                        <Card key={session.id} radius="lg" padding="md" className="pick-card">
+                        <Card key={session.id} radius="sm" padding="md" className="pick-card">
                           <Stack gap="xs">
                             <Group justify="space-between" align="flex-start" wrap="nowrap">
                               <div>
                                 <Badge
                                   variant="light"
                                   color="dark"
-                                  radius="sm"
+                                  radius={4}
                                   style={{
                                     backgroundColor: `${trackMeta[session.track].color}22`,
                                     color: trackMeta[session.track].color,
@@ -283,11 +335,23 @@ export default function App() {
                             <Text size="sm" fw={600}>
                               {timeRange(session)}
                             </Text>
-                            {session.speaker ? (
-                              <Text size="sm" c="dimmed">
-                                {session.speaker}
-                              </Text>
-                            ) : null}
+                            <Group gap={6}>
+                              {session.speaker ? (
+                                <Text size="sm" c="dimmed">
+                                  {session.speaker}
+                                </Text>
+                              ) : null}
+                              {session.codeLevel ? (
+                                <Badge size="xs" radius={4} variant="light" color="gray">
+                                  Code {session.codeLevel}
+                                </Badge>
+                              ) : null}
+                              {session.advancedLevel ? (
+                                <Badge size="xs" radius={4} variant="light" color="gray">
+                                  Adv {session.advancedLevel}
+                                </Badge>
+                              ) : null}
+                            </Group>
                           </Stack>
                         </Card>
                       ))}
@@ -325,7 +389,7 @@ export default function App() {
                 const isSharedBreak = slot.sessions.every((session) => session.type === 'break');
 
                 return (
-                  <Paper key={slot.key} radius="xl" p="md" className="slot-panel">
+                  <Paper key={slot.key} radius="sm" p="md" className="slot-panel">
                     <Group align="flex-start" gap="md" className="slot-layout">
                       <div className="slot-time">
                         <Text fw={800} className="slot-time-range">
@@ -337,9 +401,9 @@ export default function App() {
                       </div>
 
                       {isSharedBreak ? (
-                        <Paper radius="xl" p="lg" className="break-card">
+                        <Paper radius="sm" p="lg" className="break-card">
                           <Group gap="sm" align="center">
-                            <ThemeIcon size="xl" radius="xl" color="orange" variant="light">
+                            <ThemeIcon size="xl" radius={6} color="orange" variant="light">
                               <IconCoffee size={22} />
                             </ThemeIcon>
                             <div>
@@ -356,11 +420,12 @@ export default function App() {
                           {slot.sessions.map((session) => {
                             const track = trackMeta[session.track];
                             const isSelected = selectedIds.includes(session.id);
+                            const isExpanded = expandedSessionIds.includes(session.id);
 
                             return (
                               <Card
                                 key={session.id}
-                                radius="xl"
+                                radius="sm"
                                 padding="lg"
                                 className="session-card"
                                 style={{
@@ -374,7 +439,7 @@ export default function App() {
                                   <Group justify="space-between" align="flex-start" wrap="nowrap">
                                     <div>
                                       <Badge
-                                        radius="sm"
+                                        radius={4}
                                         variant="light"
                                         style={{
                                           backgroundColor: `${track.color}22`,
@@ -383,14 +448,23 @@ export default function App() {
                                       >
                                         {track.label}
                                       </Badge>
-                                      <Text fw={800} mt="xs" className="session-title">
+                                      <Text
+                                        fw={800}
+                                        mt="xs"
+                                        className="session-title session-title-toggle"
+                                        onClick={() => {
+                                          if (session.summary) {
+                                            toggleExpanded(session.id);
+                                          }
+                                        }}
+                                      >
                                         {session.title}
                                       </Text>
                                     </div>
                                     <ActionIcon
                                       color={isSelected ? 'orange' : 'gray'}
                                       variant={isSelected ? 'filled' : 'light'}
-                                      radius="xl"
+                                      radius="sm"
                                       onClick={() => toggleSelected(session.id)}
                                       aria-label={
                                         isSelected ? 'Remove from my picks' : 'Add to my picks'
@@ -405,47 +479,65 @@ export default function App() {
                                   </Group>
 
                                   <Group gap="xs">
-                                    <Badge variant="dot" color="dark">
+                                    <Badge variant="dot" radius={4} color="dark">
                                       {timeRange(session)}
                                     </Badge>
                                   </Group>
 
-                                  {session.speaker ? <Text fw={600}>{session.speaker}</Text> : null}
+                                  <Group gap={6}>
+                                    {session.speaker ? (
+                                      <Text fw={600} size="sm">
+                                        {session.speaker}
+                                      </Text>
+                                    ) : null}
+                                    {session.codeLevel ? (
+                                      <Badge
+                                        size="xs"
+                                        radius={4}
+                                        variant="light"
+                                        color="gray"
+                                        className="rating-badge"
+                                      >
+                                        Code {session.codeLevel}
+                                      </Badge>
+                                    ) : null}
+                                    {session.advancedLevel ? (
+                                      <Badge
+                                        size="xs"
+                                        radius={4}
+                                        variant="light"
+                                        color="gray"
+                                        className="rating-badge"
+                                      >
+                                        Adv {session.advancedLevel}
+                                      </Badge>
+                                    ) : null}
+                                  </Group>
 
                                   {session.summary ? (
-                                    <Accordion radius="lg" variant="separated">
-                                      <Accordion.Item value="details">
-                                        <Accordion.Control>Read more</Accordion.Control>
-                                        <Accordion.Panel>
-                                          <Stack gap="sm">
-                                            <Text size="sm">{session.summary}</Text>
-                                            {isSelected ? (
-                                              <Group gap="xs">
-                                                <ThemeIcon
-                                                  size="sm"
-                                                  radius="xl"
-                                                  color="orange"
-                                                  variant="light"
-                                                >
-                                                  <IconCheck size={12} />
-                                                </ThemeIcon>
-                                                <Text size="sm" c="dimmed">
-                                                  Saved in your schedule on this device
-                                                </Text>
-                                              </Group>
-                                            ) : null}
-                                          </Stack>
-                                        </Accordion.Panel>
-                                      </Accordion.Item>
-                                    </Accordion>
+                                    <Collapse expanded={isExpanded}>
+                                      <Stack gap="sm" className="session-details">
+                                        <Text size="sm">{session.summary}</Text>
+                                        {isSelected ? (
+                                          <Group gap="xs">
+                                            <ThemeIcon
+                                              size="sm"
+                                              radius={6}
+                                              color="orange"
+                                              variant="light"
+                                            >
+                                              <IconCheck size={12} />
+                                            </ThemeIcon>
+                                            <Text size="sm" c="dimmed">
+                                              Saved in your schedule on this device
+                                            </Text>
+                                          </Group>
+                                        ) : null}
+                                      </Stack>
+                                    </Collapse>
                                   ) : isSelected ? (
                                     <Group gap="xs">
-                                      <ThemeIcon
-                                        size="sm"
-                                        radius="xl"
-                                        color="orange"
-                                        variant="light"
-                                      >
+                                      <ThemeIcon size="sm" radius={6} color="orange" variant="light">
                                         <IconCheck size={12} />
                                       </ThemeIcon>
                                       <Text size="sm" c="dimmed">
