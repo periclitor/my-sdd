@@ -21,7 +21,6 @@ import {
   IconChevronDown,
   IconChevronUp,
   IconCheck,
-  IconCoffee,
   IconFilter,
   IconStar,
   IconStarFilled,
@@ -99,6 +98,7 @@ export default function App() {
   const [expandedSelectionIds, setExpandedSelectionIds] = useState<string[]>(
     [],
   );
+  const [expandedSlotKeys, setExpandedSlotKeys] = useState<string[]>([]);
 
   const agendaDays = useMemo(
     () => Array.from(new Set(agendaSessions.map((session) => session.date))),
@@ -110,6 +110,13 @@ export default function App() {
       setDay(agendaDays[0]);
     }
   }, [agendaDays, day]);
+
+  useEffect(() => {
+    const currentDate = dayjs().format("YYYY-MM-DD");
+    if (agendaDays.includes(currentDate)) {
+      setDay(currentDate);
+    }
+  }, [agendaDays]);
 
   const selectedSessions = useMemo(
     () =>
@@ -173,6 +180,14 @@ export default function App() {
       current.includes(sessionId)
         ? current.filter((id) => id !== sessionId)
         : [...current, sessionId],
+    );
+  };
+
+  const toggleExpandedSlot = (slotKey: string) => {
+    setExpandedSlotKeys((current) =>
+      current.includes(slotKey)
+        ? current.filter((key) => key !== slotKey)
+        : [...current, slotKey],
     );
   };
 
@@ -521,6 +536,7 @@ export default function App() {
                 const isSharedBreak = slot.sessions.every(
                   (session) => session.type === "break",
                 );
+                const isSlotExpanded = expandedSlotKeys.includes(slot.key);
 
                 return (
                   <Paper
@@ -529,33 +545,31 @@ export default function App() {
                     p="md"
                     className="slot-panel"
                   >
-                    <Group align="flex-start" gap="md" className="slot-layout">
+                    <Group
+                      align="flex-start"
+                      gap="md"
+                      className="slot-layout"
+                      onClick={() =>
+                        !isSharedBreak && toggleExpandedSlot(slot.key)
+                      }
+                      style={{ cursor: isSharedBreak ? "default" : "pointer" }}
+                    >
                       <div className="slot-time">
                         <Text fw={800} className="slot-time-range">
-                          {slot.sessions[0].start}
+                          {isSharedBreak
+                            ? `${slot.sessions[0].start} - ${slot.sessions[0].title}`
+                            : slot.sessions[0].start}
                         </Text>
                         <Text size="sm" c="dimmed">
-                          until {slot.sessions[0].end}
+                          {isSharedBreak
+                            ? "All tracks"
+                            : `until ${slot.sessions[0].end}`}
                         </Text>
                       </div>
+                    </Group>
 
-                      {isSharedBreak ? (
-                        <Paper radius="sm" p="lg" className="break-card">
-                          <Group gap="sm" align="center">
-                            <ThemeIcon
-                              size="xl"
-                              radius={6}
-                              color="orange"
-                              variant="light"
-                            >
-                              <IconCoffee size={22} />
-                            </ThemeIcon>
-                            <div>
-                              <Text fw={800}>{slot.sessions[0].title}</Text>
-                            </div>
-                          </Group>
-                        </Paper>
-                      ) : (
+                    {isSharedBreak ? null : (
+                      <Collapse expanded={isSlotExpanded}>
                         <SimpleGrid
                           cols={{ base: 1, md: 2, xl: 3 }}
                           spacing="md"
@@ -716,8 +730,8 @@ export default function App() {
                             );
                           })}
                         </SimpleGrid>
-                      )}
-                    </Group>
+                      </Collapse>
+                    )}
                   </Paper>
                 );
               })}
