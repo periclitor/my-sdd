@@ -15,7 +15,7 @@ import {
   Text,
   ThemeIcon,
   Title,
-} from '@mantine/core';
+} from "@mantine/core";
 import {
   IconCalendarEvent,
   IconChevronDown,
@@ -25,28 +25,28 @@ import {
   IconFilter,
   IconStar,
   IconStarFilled,
-} from '@tabler/icons-react';
-import { useLocalStorage } from '@mantine/hooks';
-import dayjs from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
-import fallbackAgenda from './data/agenda.json';
-import { trackMeta } from './data/tracks';
-import { agendaSourceUrl } from './lib/agenda-parser';
-import type { AgendaData, AgendaSession, TrackId } from './types';
+} from "@tabler/icons-react";
+import { useLocalStorage } from "@mantine/hooks";
+import dayjs from "dayjs";
+import { useEffect, useMemo, useState } from "react";
+import fallbackAgenda from "./data/agenda.json";
+import { trackMeta } from "./data/tracks";
+import { agendaSourceUrl } from "./lib/agenda-parser";
+import type { AgendaData, AgendaSession, TrackId } from "./types";
 
-const selectionStorageKey = 'sdd-planner:selected-sessions';
+const selectionStorageKey = "sdd-planner:selected-sessions";
 const fallbackAgendaData = fallbackAgenda as AgendaData;
 
 function formatDayLabel(date: string) {
-  return dayjs(date).format('ddd D MMM');
+  return dayjs(date).format("ddd D MMM");
 }
 
 function formatDayHeading(date: string) {
-  return dayjs(date).format('dddd D MMMM');
+  return dayjs(date).format("dddd D MMMM");
 }
 
 function formatUpdatedAt(date: string) {
-  return dayjs(date).format('D MMM YYYY HH:mm');
+  return dayjs(date).format("D MMM YYYY HH:mm");
 }
 
 function timeRange(session: AgendaSession) {
@@ -71,7 +71,9 @@ function groupByTime<T extends { start: string; end: string }>(items: T[]) {
 }
 
 function compareSessions(a: AgendaSession, b: AgendaSession) {
-  return `${a.date}${a.start}${a.track}`.localeCompare(`${b.date}${b.start}${b.track}`);
+  return `${a.date}${a.start}${a.track}`.localeCompare(
+    `${b.date}${b.start}${b.track}`,
+  );
 }
 
 export default function App() {
@@ -82,15 +84,21 @@ export default function App() {
   const agendaData: AgendaData = fallbackAgendaData;
   const agendaSessions = agendaData.sessions;
   const trackEntries = useMemo(
-    () => Object.entries(trackMeta) as Array<[TrackId, (typeof trackMeta)[TrackId]]>,
+    () =>
+      Object.entries(trackMeta) as Array<
+        [TrackId, (typeof trackMeta)[TrackId]]
+      >,
     [],
   );
 
-  const [day, setDay] = useState<string>(agendaSessions[0]?.date ?? '');
+  const [day, setDay] = useState<string>(agendaSessions[0]?.date ?? "");
   const [showOnlySelected, setShowOnlySelected] = useState(false);
   const [trackFilter, setTrackFilter] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSessionIds, setExpandedSessionIds] = useState<string[]>([]);
+  const [expandedSelectionIds, setExpandedSelectionIds] = useState<string[]>(
+    [],
+  );
 
   const agendaDays = useMemo(
     () => Array.from(new Set(agendaSessions.map((session) => session.date))),
@@ -132,11 +140,17 @@ export default function App() {
   const slots = useMemo(() => {
     const grouped = groupByTime(visibleSessions);
     return Object.entries(grouped)
-      .map(([key, sessions]) => ({ key, sessions: sessions.sort(compareSessions) }))
+      .map(([key, sessions]) => ({
+        key,
+        sessions: sessions.sort(compareSessions),
+      }))
       .sort((a, b) => a.key.localeCompare(b.key));
   }, [visibleSessions]);
 
-  const selectedByDate = useMemo(() => groupByDate(selectedSessions), [selectedSessions]);
+  const selectedByDate = useMemo(
+    () => groupByDate(selectedSessions),
+    [selectedSessions],
+  );
 
   const toggleSelected = (sessionId: string) => {
     setSelectedIds((current) =>
@@ -154,6 +168,14 @@ export default function App() {
     );
   };
 
+  const toggleExpandedSelection = (sessionId: string) => {
+    setExpandedSelectionIds((current) =>
+      current.includes(sessionId)
+        ? current.filter((id) => id !== sessionId)
+        : [...current, sessionId],
+    );
+  };
+
   return (
     <div className="app-shell">
       <Container size="lg" className="page-shell">
@@ -161,15 +183,26 @@ export default function App() {
           <Paper radius="sm" className="hero-panel">
             <div className="hero-backdrop" />
             <Stack gap="lg" className="hero-content">
-              <Group justify="space-between" align="flex-start" className="hero-topline">
+              <Group
+                justify="space-between"
+                align="flex-start"
+                className="hero-topline"
+              >
                 <Badge size="lg" radius={4} variant="light" color="orange">
                   SDD agenda planner
                 </Badge>
                 <Group gap="xs">
-                  <ThemeIcon radius={6} size="lg" variant="light" color="orange">
+                  <ThemeIcon
+                    radius={6}
+                    size="lg"
+                    variant="light"
+                    color="orange"
+                  >
                     <IconCalendarEvent size={18} />
                   </ThemeIcon>
-                  <Text className="hero-meta">Mobile first, saved on this device</Text>
+                  <Text className="hero-meta">
+                    Mobile first, saved on this device
+                  </Text>
                 </Group>
               </Group>
 
@@ -178,8 +211,9 @@ export default function App() {
                   See the whole conference day without losing your own plan.
                 </Title>
                 <Text className="hero-copy">
-                  Browse the real SDD 2026 schedule across numbered tracks, keynote, and
-                  workshop days, then keep your shortlist in local storage on this device.
+                  Browse the real SDD 2026 schedule across numbered tracks,
+                  keynote, and workshop days, then keep your shortlist in local
+                  storage on this device.
                 </Text>
                 <Text size="sm" c="dimmed" mt="sm">
                   {`Using the bundled agenda snapshot from ${formatUpdatedAt(agendaData.extractedAt)}. Source: ${agendaSourceUrl}.`}
@@ -205,7 +239,11 @@ export default function App() {
 
           <Paper radius="sm" p="md" className="toolbar-panel">
             <Stack gap="md">
-              <Group justify="space-between" align="center" className="toolbar-row">
+              <Group
+                justify="space-between"
+                align="center"
+                className="toolbar-row"
+              >
                 <div>
                   <Text fw={700}>Choose a day</Text>
                   <Text size="sm" c="dimmed">
@@ -219,14 +257,20 @@ export default function App() {
                     radius="sm"
                     onClick={() => setShowFilters((current) => !current)}
                     rightSection={
-                      showFilters ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />
+                      showFilters ? (
+                        <IconChevronUp size={16} />
+                      ) : (
+                        <IconChevronDown size={16} />
+                      )
                     }
                   >
-                    {showFilters ? 'Hide day chooser' : 'Show day chooser'}
+                    {showFilters ? "Hide day chooser" : "Show day chooser"}
                   </Button>
                   <Switch
                     checked={showOnlySelected}
-                    onChange={(event) => setShowOnlySelected(event.currentTarget.checked)}
+                    onChange={(event) =>
+                      setShowOnlySelected(event.currentTarget.checked)
+                    }
                     label="Only my picks"
                     color="orange"
                   />
@@ -249,19 +293,33 @@ export default function App() {
 
                   <div>
                     <Group gap="xs" mb="xs">
-                      <ThemeIcon size="sm" radius={6} variant="light" color="orange">
+                      <ThemeIcon
+                        size="sm"
+                        radius={6}
+                        variant="light"
+                        color="orange"
+                      >
                         <IconFilter size={14} />
                       </ThemeIcon>
                       <Text fw={600} size="sm">
                         Track filter
                       </Text>
                     </Group>
-                    <Chip.Group multiple value={trackFilter} onChange={setTrackFilter}>
+                    <Chip.Group
+                      multiple
+                      value={trackFilter}
+                      onChange={setTrackFilter}
+                    >
                       <Group gap="xs">
                         {trackEntries
-                          .filter(([track]) => track !== 'shared')
+                          .filter(([track]) => track !== "shared")
                           .map(([track, meta]) => (
-                            <Chip key={track} value={track} color="dark" radius="sm">
+                            <Chip
+                              key={track}
+                              value={track}
+                              color="dark"
+                              radius="sm"
+                            >
                               {meta.label}
                             </Chip>
                           ))}
@@ -280,7 +338,8 @@ export default function App() {
                   My selections
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Your saved choices stay on this device. Use them as a quick focus view.
+                  Your saved choices stay on this device. Use them as a quick
+                  focus view.
                 </Text>
               </div>
               <Badge color="dark" radius={4} variant="filled">
@@ -303,58 +362,130 @@ export default function App() {
                       {formatDayHeading(date)}
                     </Text>
                     <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="sm">
-                      {sessions.map((session) => (
-                        <Card key={session.id} radius="sm" padding="md" className="pick-card">
-                          <Stack gap="xs">
-                            <Group justify="space-between" align="flex-start" wrap="nowrap">
-                              <div>
-                                <Badge
-                                  variant="light"
-                                  color="dark"
-                                  radius={4}
-                                  style={{
-                                    backgroundColor: `${trackMeta[session.track].color}22`,
-                                    color: trackMeta[session.track].color,
-                                  }}
-                                >
-                                  {trackMeta[session.track].label}
-                                </Badge>
-                                <Text fw={800} mt={8}>
-                                  {session.title}
-                                </Text>
-                              </div>
-                              <ActionIcon
-                                variant="subtle"
-                                color="orange"
-                                onClick={() => toggleSelected(session.id)}
-                                aria-label="Remove selection"
+                      {sessions.map((session) => {
+                        const track = trackMeta[session.track];
+                        const isExpanded = expandedSelectionIds.includes(
+                          session.id,
+                        );
+
+                        return (
+                          <Card
+                            key={session.id}
+                            radius="sm"
+                            padding="md"
+                            className="pick-card"
+                          >
+                            <Stack gap="xs">
+                              <Group
+                                justify="space-between"
+                                align="flex-start"
+                                wrap="nowrap"
                               >
-                                <IconStarFilled size={18} />
-                              </ActionIcon>
-                            </Group>
-                            <Text size="sm" fw={600}>
-                              {timeRange(session)}
-                            </Text>
-                            <Group gap={6}>
-                              {session.speaker ? (
-                                <Text size="sm" c="dimmed">
-                                  {session.speaker}
+                                <div>
+                                  <Badge
+                                    variant="light"
+                                    color="dark"
+                                    radius={4}
+                                    style={{
+                                      backgroundColor: `${track.color}22`,
+                                      color: track.color,
+                                    }}
+                                  >
+                                    {track.label}
+                                  </Badge>
+                                  <Text
+                                    fw={800}
+                                    mt={8}
+                                    className="session-title session-title-toggle"
+                                    onClick={() => {
+                                      if (session.summary) {
+                                        toggleExpandedSelection(session.id);
+                                      }
+                                    }}
+                                  >
+                                    {session.title}
+                                  </Text>
+                                </div>
+                                <ActionIcon
+                                  variant="subtle"
+                                  color="orange"
+                                  onClick={() => toggleSelected(session.id)}
+                                  aria-label="Remove selection"
+                                >
+                                  <IconStarFilled size={18} />
+                                </ActionIcon>
+                              </Group>
+                              <Group gap={6}>
+                                <Text size="sm" fw={600}>
+                                  {timeRange(session)}
                                 </Text>
-                              ) : null}
-                              {session.codeLevel ? (
-                                <Badge size="xs" radius={4} variant="light" color="gray">
-                                  Code {session.codeLevel}
-                                </Badge>
-                              ) : null}
-                              {session.advancedLevel ? (
-                                <Badge size="xs" radius={4} variant="light" color="gray">
-                                  Adv {session.advancedLevel}
-                                </Badge>
-                              ) : null}
-                            </Group>
-                          </Stack>
-                        </Card>
-                      ))}
+                                {session.codeLevel ? (
+                                  <Badge
+                                    size="sm"
+                                    radius={4}
+                                    variant="light"
+                                    color="gray"
+                                  >
+                                    Code {session.codeLevel}
+                                  </Badge>
+                                ) : null}
+                                {session.advancedLevel ? (
+                                  <Badge
+                                    size="sm"
+                                    radius={4}
+                                    variant="light"
+                                    color="gray"
+                                  >
+                                    Adv {session.advancedLevel}
+                                  </Badge>
+                                ) : null}
+                              </Group>
+                              <Group gap={6}>
+                                {session.speaker ? (
+                                  <Text size="sm" c="dimmed">
+                                    {session.speaker}
+                                  </Text>
+                                ) : null}
+                              </Group>
+
+                              {session.summary ? (
+                                <Collapse expanded={isExpanded}>
+                                  <Stack gap="sm" className="session-details">
+                                    <Text size="sm">{session.summary}</Text>
+                                    <Group gap="xs">
+                                      <ThemeIcon
+                                        size="sm"
+                                        radius={6}
+                                        color="orange"
+                                        variant="light"
+                                      >
+                                        <IconCheck size={12} />
+                                      </ThemeIcon>
+                                      <Text size="sm" c="dimmed">
+                                        Saved in your schedule on this device
+                                      </Text>
+                                    </Group>
+                                  </Stack>
+                                </Collapse>
+                              ) : (
+                                <Group gap="xs">
+                                  <ThemeIcon
+                                    size="sm"
+                                    radius={6}
+                                    color="orange"
+                                    variant="light"
+                                  >
+                                    <IconCheck size={12} />
+                                  </ThemeIcon>
+                                  <Text size="sm" c="dimmed">
+                                    Saved in your schedule on this device
+                                  </Text>
+                                </Group>
+                              )}
+                            </Stack>
+                          </Card>
+                        );
+                      })}
                     </SimpleGrid>
                   </div>
                 ))}
@@ -369,7 +500,8 @@ export default function App() {
                   Agenda for {formatDayHeading(day)}
                 </Text>
                 <Text size="sm" c="dimmed">
-                  Expand any card for details and swap your choices whenever you want.
+                  Expand any card for details and swap your choices whenever you
+                  want.
                 </Text>
               </div>
               <Button
@@ -386,10 +518,17 @@ export default function App() {
 
             <Stack gap="md">
               {slots.map((slot) => {
-                const isSharedBreak = slot.sessions.every((session) => session.type === 'break');
+                const isSharedBreak = slot.sessions.every(
+                  (session) => session.type === "break",
+                );
 
                 return (
-                  <Paper key={slot.key} radius="sm" p="md" className="slot-panel">
+                  <Paper
+                    key={slot.key}
+                    radius="sm"
+                    p="md"
+                    className="slot-panel"
+                  >
                     <Group align="flex-start" gap="md" className="slot-layout">
                       <div className="slot-time">
                         <Text fw={800} className="slot-time-range">
@@ -403,7 +542,12 @@ export default function App() {
                       {isSharedBreak ? (
                         <Paper radius="sm" p="lg" className="break-card">
                           <Group gap="sm" align="center">
-                            <ThemeIcon size="xl" radius={6} color="orange" variant="light">
+                            <ThemeIcon
+                              size="xl"
+                              radius={6}
+                              color="orange"
+                              variant="light"
+                            >
                               <IconCoffee size={22} />
                             </ThemeIcon>
                             <div>
@@ -420,7 +564,9 @@ export default function App() {
                           {slot.sessions.map((session) => {
                             const track = trackMeta[session.track];
                             const isSelected = selectedIds.includes(session.id);
-                            const isExpanded = expandedSessionIds.includes(session.id);
+                            const isExpanded = expandedSessionIds.includes(
+                              session.id,
+                            );
 
                             return (
                               <Card
@@ -430,13 +576,18 @@ export default function App() {
                                 className="session-card"
                                 style={{
                                   borderColor: `${track.color}55`,
-                                  boxShadow: isSelected
-                                    ? `0 18px 38px -24px ${track.color}`
+                                  borderWidth: isSelected ? "2px" : "1px",
+                                  backgroundColor: isSelected
+                                    ? `${track.color}11`
                                     : undefined,
                                 }}
                               >
                                 <Stack gap="sm">
-                                  <Group justify="space-between" align="flex-start" wrap="nowrap">
+                                  <Group
+                                    justify="space-between"
+                                    align="flex-start"
+                                    wrap="nowrap"
+                                  >
                                     <div>
                                       <Badge
                                         radius={4}
@@ -462,12 +613,14 @@ export default function App() {
                                       </Text>
                                     </div>
                                     <ActionIcon
-                                      color={isSelected ? 'orange' : 'gray'}
-                                      variant={isSelected ? 'filled' : 'light'}
+                                      color={isSelected ? "orange" : "gray"}
+                                      variant={isSelected ? "filled" : "light"}
                                       radius="sm"
                                       onClick={() => toggleSelected(session.id)}
                                       aria-label={
-                                        isSelected ? 'Remove from my picks' : 'Add to my picks'
+                                        isSelected
+                                          ? "Remove from my picks"
+                                          : "Add to my picks"
                                       }
                                     >
                                       {isSelected ? (
@@ -479,20 +632,16 @@ export default function App() {
                                   </Group>
 
                                   <Group gap="xs">
-                                    <Badge variant="dot" radius={4} color="dark">
+                                    <Badge
+                                      variant="dot"
+                                      radius={4}
+                                      color="dark"
+                                    >
                                       {timeRange(session)}
                                     </Badge>
-                                  </Group>
-
-                                  <Group gap={6}>
-                                    {session.speaker ? (
-                                      <Text fw={600} size="sm">
-                                        {session.speaker}
-                                      </Text>
-                                    ) : null}
                                     {session.codeLevel ? (
                                       <Badge
-                                        size="xs"
+                                        size="sm"
                                         radius={4}
                                         variant="light"
                                         color="gray"
@@ -503,7 +652,7 @@ export default function App() {
                                     ) : null}
                                     {session.advancedLevel ? (
                                       <Badge
-                                        size="xs"
+                                        size="sm"
                                         radius={4}
                                         variant="light"
                                         color="gray"
@@ -514,9 +663,20 @@ export default function App() {
                                     ) : null}
                                   </Group>
 
+                                  <Group gap={6}>
+                                    {session.speaker ? (
+                                      <Text fw={600} size="sm">
+                                        {session.speaker}
+                                      </Text>
+                                    ) : null}
+                                  </Group>
+
                                   {session.summary ? (
                                     <Collapse expanded={isExpanded}>
-                                      <Stack gap="sm" className="session-details">
+                                      <Stack
+                                        gap="sm"
+                                        className="session-details"
+                                      >
                                         <Text size="sm">{session.summary}</Text>
                                         {isSelected ? (
                                           <Group gap="xs">
@@ -529,7 +689,8 @@ export default function App() {
                                               <IconCheck size={12} />
                                             </ThemeIcon>
                                             <Text size="sm" c="dimmed">
-                                              Saved in your schedule on this device
+                                              Saved in your schedule on this
+                                              device
                                             </Text>
                                           </Group>
                                         ) : null}
@@ -537,7 +698,12 @@ export default function App() {
                                     </Collapse>
                                   ) : isSelected ? (
                                     <Group gap="xs">
-                                      <ThemeIcon size="sm" radius={6} color="orange" variant="light">
+                                      <ThemeIcon
+                                        size="sm"
+                                        radius={6}
+                                        color="orange"
+                                        variant="light"
+                                      >
                                         <IconCheck size={12} />
                                       </ThemeIcon>
                                       <Text size="sm" c="dimmed">
