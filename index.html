@@ -8,6 +8,27 @@
       name="description"
       content="Mobile-first conference planner for choosing talks and keeping a personal agenda on this device."
     />
+    <script>
+      (() => {
+        const storageKey = 'sdd-planner:color-scheme';
+        const storedValue = window.localStorage.getItem(storageKey);
+        const colorScheme =
+          storedValue === 'light' || storedValue === 'dark' || storedValue === 'auto'
+            ? storedValue
+            : 'auto';
+        const resolvedColorScheme =
+          colorScheme === 'auto'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : colorScheme;
+
+        document.documentElement.setAttribute(
+          'data-mantine-color-scheme',
+          resolvedColorScheme,
+        );
+      })();
+    </script>
     <title>SDD Agenda Planner</title>
   </head>
   <body>

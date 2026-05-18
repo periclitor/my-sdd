@@ -1,16 +1,16 @@
-import fs from 'node:fs/promises';
-import { chromium } from 'playwright';
+import fs from "node:fs/promises";
+import { chromium } from "playwright";
 
-const agendaSourceUrl = 'https://sddconf.com/agenda';
-const outputPath = new URL('../src/data/agenda.json', import.meta.url);
-const debugOutputPath = new URL('../tmp/agenda-debug.html', import.meta.url);
+const agendaSourceUrl = "https://sddconf.com/agenda";
+const outputPath = new URL("../src/data/agenda.json", import.meta.url);
+const debugOutputPath = new URL("../tmp/agenda-debug.html", import.meta.url);
 
 const dayMap = {
-  'Monday 11 May 2026': '2026-05-11',
-  'Tuesday 12 May 2026': '2026-05-12',
-  'Wednesday 13 May 2026': '2026-05-13',
-  'Thursday 14 May 2026': '2026-05-14',
-  'Friday 15 May 2026': '2026-05-15',
+  "Monday 11 May 2026": "2026-05-11",
+  "Tuesday 12 May 2026": "2026-05-12",
+  "Wednesday 13 May 2026": "2026-05-13",
+  "Thursday 14 May 2026": "2026-05-14",
+  "Friday 15 May 2026": "2026-05-15",
 };
 
 function findMatchingDivEnd(source, startIndex) {
@@ -22,7 +22,7 @@ function findMatchingDivEnd(source, startIndex) {
   let match;
 
   while ((match = tokenRe.exec(source))) {
-    if (match[0] === '<div') {
+    if (match[0] === "<div") {
       depth += 1;
       started = true;
     } else {
@@ -39,28 +39,28 @@ function findMatchingDivEnd(source, startIndex) {
 
 function decode(text) {
   return text
-    .replace(/&amp;/g, '&')
-    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 function slug(text) {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function trackIdFromTheme(theme) {
   if (!theme) {
-    return 'shared';
+    return "shared";
   }
 
   const trackMatch = theme.match(/^Track (\d)$/);
@@ -69,23 +69,24 @@ function trackIdFromTheme(theme) {
     return `track-${trackMatch[1]}`;
   }
 
-  if (theme === 'Keynote Presentation') {
-    return 'keynote';
+  if (theme === "Keynote Presentation") {
+    return "keynote";
   }
 
-  if (theme === 'Pre-Conference Workshop') {
-    return 'pre-workshop';
+  if (theme === "Pre-Conference Workshop") {
+    return "pre-workshop";
   }
 
-  if (theme === 'Post-Conference Workshop') {
-    return 'post-workshop';
+  if (theme === "Post-Conference Workshop") {
+    return "post-workshop";
   }
 
   throw new Error(`Unknown agenda theme: ${theme}`);
 }
 
 function parseAgendaHtml(html, sourceUrl = agendaSourceUrl) {
-  const headingRe = /<h3(?:\s+class="(?:stuck)?")?\s*><span>([^<]+)<\/span><\/h3>/g;
+  const headingRe =
+    /<h3(?:\s+class="(?:stuck)?")?\s*><span>([^<]+)<\/span><\/h3>/g;
   const headings = [...html.matchAll(headingRe)].map((match) => ({
     label: match[1],
     index: match.index ?? 0,
@@ -100,7 +101,8 @@ function parseAgendaHtml(html, sourceUrl = agendaSourceUrl) {
       continue;
     }
 
-    const sectionEnd = i + 1 < headings.length ? headings[i + 1].index : html.length;
+    const sectionEnd =
+      i + 1 < headings.length ? headings[i + 1].index : html.length;
     const section = html.slice(index, sectionEnd);
     const boxRe = /<div id="([^"]+)" class="box">/g;
     let boxMatch;
@@ -110,14 +112,23 @@ function parseAgendaHtml(html, sourceUrl = agendaSourceUrl) {
       const end = findMatchingDivEnd(section, start);
       const box = section.slice(start, end);
       const timeMatch = box.match(/<p>\s*(\d{2}:\d{2})–(\d{2}:\d{2})\s*<\/p>/);
-      const titleMatch = box.match(/<h2>\s*(?:<a[^>]*>)?([\s\S]*?)(?:<\/a>)?\s*<\/h2>/);
+      const titleMatch = box.match(
+        /<h2>\s*(?:<a[^>]*>)?([\s\S]*?)(?:<\/a>)?\s*<\/h2>/,
+      );
 
       if (!timeMatch || !titleMatch) {
         continue;
       }
 
-      const theme = box.match(/<p class="theme">([^<]+)<\/p>/)?.[1]?.trim() ?? null;
-      const speaker = box.match(/class="speaker-name"\s*>\s*([^<]+)\s*</)?.[1]?.trim();
+      const theme =
+        box.match(/<p class="theme">([^<]+)<\/p>/)?.[1]?.trim() ?? null;
+      const speaker = box
+        .match(/class="speaker-name"\s*>\s*([^<]+)\s*</)?.[1]
+        ?.trim();
+      const room =
+        box.match(/<p class="room">\s*<span>\s*([^<]+)\s*<\/span>\s*<\/p>/)?.[
+          1
+        ]?.trim() ?? null;
       const codeLevel = box.match(
         /<div class="level-badge code-level">\s*Coding Level\s*<span>(\d)<\/span>\s*<\/div>/,
       )?.[1];
@@ -128,7 +139,10 @@ function parseAgendaHtml(html, sourceUrl = agendaSourceUrl) {
         /<div\s+id="desc[^"]*"\s+class="description"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*$/,
       )?.[1];
       const summary = descBlock
-        ? decode(descBlock).replace(/^Coding Level\s+\d+\s+Advanced Level\s+\d+\s+/, '')
+        ? decode(descBlock).replace(
+            /^Coding Level\s+\d+\s+Advanced Level\s+\d+\s+/,
+            "",
+          )
         : undefined;
       const title = decode(titleMatch[1]);
 
@@ -138,9 +152,10 @@ function parseAgendaHtml(html, sourceUrl = agendaSourceUrl) {
         start: timeMatch[1],
         end: timeMatch[2],
         track: trackIdFromTheme(theme),
-        type: theme ? 'talk' : 'break',
+        type: theme ? "talk" : "break",
         title,
         ...(speaker ? { speaker: decode(speaker) } : {}),
+        ...(room ? { room: decode(room) } : { room: null }),
         ...(summary ? { summary } : {}),
         ...(codeLevel ? { codeLevel: Number(codeLevel) } : {}),
         ...(advancedLevel ? { advancedLevel: Number(advancedLevel) } : {}),
@@ -149,7 +164,7 @@ function parseAgendaHtml(html, sourceUrl = agendaSourceUrl) {
   }
 
   if (sessions.length === 0) {
-    throw new Error('No agenda sessions were parsed from the rendered HTML.');
+    throw new Error("No agenda sessions were parsed from the rendered HTML.");
   }
 
   return {
@@ -175,18 +190,19 @@ try {
   const page = await browser.newPage();
 
   await page.goto(agendaSourceUrl, {
-    waitUntil: 'domcontentloaded',
+    waitUntil: "domcontentloaded",
     timeout: 60000,
   });
 
-  await page.waitForSelector('.page-agenda', {
+  await page.waitForSelector(".page-agenda", {
     timeout: 60000,
   });
 
   await page.waitForFunction(
     () =>
-      document.querySelectorAll('.page-agenda .agenda-item-holder .box').length > 0 ||
-      document.querySelectorAll('.page-agenda .agenda-item-holder').length > 0,
+      document.querySelectorAll(".page-agenda .agenda-item-holder .box")
+        .length > 0 ||
+      document.querySelectorAll(".page-agenda .agenda-item-holder").length > 0,
     {
       timeout: 60000,
     },
@@ -194,10 +210,14 @@ try {
 
   await page.waitForTimeout(3000);
 
-  const html = await page.evaluate(() => document.querySelector('.page-agenda')?.outerHTML ?? null);
+  const html = await page.evaluate(
+    () => document.querySelector(".page-agenda")?.outerHTML ?? null,
+  );
 
   if (!html) {
-    throw new Error('The rendered page did not contain a .page-agenda element.');
+    throw new Error(
+      "The rendered page did not contain a .page-agenda element.",
+    );
   }
 
   const agendaData = parseAgendaHtml(html, agendaSourceUrl);
@@ -224,15 +244,17 @@ try {
     if (activePage) {
       const html =
         (await activePage.evaluate(
-          () => document.querySelector('.page-agenda')?.outerHTML ?? document.documentElement.outerHTML,
-        )) ?? '';
-      await fs.mkdir(new URL('../tmp/', import.meta.url), { recursive: true });
+          () =>
+            document.querySelector(".page-agenda")?.outerHTML ??
+            document.documentElement.outerHTML,
+        )) ?? "";
+      await fs.mkdir(new URL("../tmp/", import.meta.url), { recursive: true });
       await fs.writeFile(debugOutputPath, html);
     }
   }
 
   throw new Error(
-    `${error instanceof Error ? error.message : String(error)}\nSaved debug HTML to ${debugOutputPath.pathname.replace(/^\//, '')}`,
+    `${error instanceof Error ? error.message : String(error)}\nSaved debug HTML to ${debugOutputPath.pathname.replace(/^\//, "")}`,
   );
 } finally {
   await browser.close();

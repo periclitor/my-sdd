@@ -4,7 +4,11 @@ import '@fontsource/manrope/latin-600.css';
 import '@fontsource/manrope/latin-700.css';
 import '@fontsource/space-grotesk/latin-500.css';
 import '@fontsource/space-grotesk/latin-700.css';
-import { MantineProvider, createTheme } from '@mantine/core';
+import {
+  MantineProvider,
+  createTheme,
+  localStorageColorSchemeManager,
+} from '@mantine/core';
 import { registerSW } from 'virtual:pwa-register';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -12,6 +16,10 @@ import App from './App';
 import './styles.css';
 
 registerSW({ immediate: true });
+
+const colorSchemeManager = localStorageColorSchemeManager({
+  key: 'sdd-planner:color-scheme',
+});
 
 const theme = createTheme({
   fontFamily: 'Manrope, Arial, sans-serif',
@@ -49,7 +57,11 @@ const theme = createTheme({
 
 createRoot(document.getElementById('app')!).render(
   <StrictMode>
-    <MantineProvider theme={theme}>
+    <MantineProvider
+      theme={theme}
+      colorSchemeManager={colorSchemeManager}
+      defaultColorScheme="auto"
+    >
       <App />
     </MantineProvider>
   </StrictMode>,

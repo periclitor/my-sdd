@@ -22,6 +22,7 @@ export interface AgendaSession {
   type: SessionType;
   title: string;
   speaker?: string;
+  room?: string | null;
   summary?: string;
   codeLevel?: number;
   advancedLevel?: number;

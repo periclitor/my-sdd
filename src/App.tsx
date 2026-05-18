@@ -15,13 +15,17 @@ import {
   Text,
   ThemeIcon,
   Title,
+  useComputedColorScheme,
+  useMantineColorScheme,
 } from "@mantine/core";
 import {
-  IconCalendarEvent,
   IconChevronDown,
   IconChevronUp,
   IconCheck,
+  IconDeviceDesktop,
   IconFilter,
+  IconMoonStars,
+  IconSun,
   IconStar,
   IconStarFilled,
 } from "@tabler/icons-react";
@@ -30,11 +34,15 @@ import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import fallbackAgenda from "./data/agenda.json";
 import { trackMeta } from "./data/tracks";
-import { agendaSourceUrl } from "./lib/agenda-parser";
 import type { AgendaData, AgendaSession, TrackId } from "./types";
 
 const selectionStorageKey = "sdd-planner:selected-sessions";
 const fallbackAgendaData = fallbackAgenda as AgendaData;
+const themeModeOptions = [
+  { label: "Auto", value: "auto" },
+  { label: "Light", value: "light" },
+  { label: "Dark", value: "dark" },
+];
 
 function formatDayLabel(date: string) {
   return dayjs(date).format("ddd D MMM");
@@ -76,6 +84,8 @@ function compareSessions(a: AgendaSession, b: AgendaSession) {
 }
 
 export default function App() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const computedColorScheme = useComputedColorScheme("light");
   const [selectedIds, setSelectedIds] = useLocalStorage<string[]>({
     key: selectionStorageKey,
     defaultValue: [],
@@ -191,9 +201,18 @@ export default function App() {
     );
   };
 
+  const themeIcon =
+    colorScheme === "auto" ? (
+      <IconDeviceDesktop size={18} />
+    ) : computedColorScheme === "dark" ? (
+      <IconMoonStars size={18} />
+    ) : (
+      <IconSun size={18} />
+    );
+
   return (
     <div className="app-shell">
-      <Container size="lg" className="page-shell">
+      <Container size="lg" px="xs" className="page-shell">
         <Stack gap="xl">
           <Paper radius="sm" className="hero-panel">
             <div className="hero-backdrop" />
@@ -206,19 +225,27 @@ export default function App() {
                 <Badge size="lg" radius={4} variant="light" color="orange">
                   SDD agenda planner
                 </Badge>
-                <Group gap="xs">
-                  <ThemeIcon
-                    radius={6}
-                    size="lg"
-                    variant="light"
-                    color="orange"
-                  >
-                    <IconCalendarEvent size={18} />
-                  </ThemeIcon>
-                  <Text className="hero-meta">
-                    Mobile first, saved on this device
-                  </Text>
-                </Group>
+                <div className="theme-switcher theme-switcher-hero">
+                  {/* <Group gap="xs" wrap="nowrap">
+                    <ThemeIcon radius={6} size="lg" variant="light" color="orange">
+                      {themeIcon}
+                    </ThemeIcon>
+                    <Text className="hero-meta">
+                      {colorScheme === "auto"
+                        ? `Following your system theme, currently ${computedColorScheme}`
+                        : `${computedColorScheme === "dark" ? "Dark" : "Light"} mode saved on this device`}
+                    </Text>
+                  </Group> */}
+                  <SegmentedControl
+                    size="sm"
+                    radius="sm"
+                    value={colorScheme}
+                    onChange={(value) =>
+                      setColorScheme(value as "auto" | "light" | "dark")
+                    }
+                    data={themeModeOptions}
+                  />
+                </div>
               </Group>
 
               <div>
@@ -231,7 +258,7 @@ export default function App() {
                   storage on this device.
                 </Text>
                 <Text size="sm" c="dimmed" mt="sm">
-                  {`Using the bundled agenda snapshot from ${formatUpdatedAt(agendaData.extractedAt)}. Source: ${agendaSourceUrl}.`}
+                  {`Using the bundled agenda snapshot from ${formatUpdatedAt(agendaData.extractedAt)}. Source: ${agendaData.sourceUrl}.`}
                 </Text>
               </div>
 
@@ -248,11 +275,14 @@ export default function App() {
                 <Badge variant="dot" color="blue">
                   Speaker
                 </Badge>
+                <Badge variant="dot" color="dark">
+                  Theme
+                </Badge>
               </Group>
             </Stack>
           </Paper>
 
-          <Paper radius="sm" p="md" className="toolbar-panel">
+          <Paper radius="sm" px="sm" py="md" className="toolbar-panel">
             <Stack gap="md">
               <Group
                 justify="space-between"
@@ -265,7 +295,7 @@ export default function App() {
                     Swap quickly between the full agenda and your personal plan.
                   </Text>
                 </div>
-                <Group gap="sm">
+                <Group gap="sm" className="toolbar-actions">
                   <Button
                     variant="subtle"
                     color="dark"
@@ -294,17 +324,38 @@ export default function App() {
 
               <Collapse expanded={showFilters}>
                 <Stack gap="md">
-                  <SegmentedControl
-                    fullWidth
-                    radius="sm"
-                    color="dark"
-                    value={day}
-                    onChange={setDay}
-                    data={agendaDays.map((date) => ({
-                      label: formatDayLabel(date),
-                      value: date,
-                    }))}
-                  />
+                  <div>
+                    <Group gap="xs" mb="xs">
+                      <ThemeIcon
+                        size="sm"
+                        radius={6}
+                        variant="light"
+                        color="orange"
+                      >
+                        <IconChevronDown size={14} />
+                      </ThemeIcon>
+                      <Text fw={600} size="sm">
+                        Day
+                      </Text>
+                    </Group>
+                    <Chip.Group
+                      value={day}
+                      onChange={(value) => setDay(value as string)}
+                    >
+                      <Group gap="xs">
+                        {agendaDays.map((date) => (
+                          <Chip
+                            key={date}
+                            value={date}
+                            color="dark"
+                            radius="sm"
+                          >
+                            {formatDayLabel(date)}
+                          </Chip>
+                        ))}
+                      </Group>
+                    </Chip.Group>
+                  </div>
 
                   <div>
                     <Group gap="xs" mb="xs">
@@ -346,7 +397,7 @@ export default function App() {
             </Stack>
           </Paper>
 
-          <Paper radius="sm" p="md" className="selection-panel">
+          <Paper radius="sm" px="sm" py="md" className="selection-panel">
             <Group justify="space-between" align="flex-start">
               <div>
                 <Text fw={800} size="lg">
@@ -363,7 +414,7 @@ export default function App() {
             </Group>
 
             {selectedSessions.length === 0 ? (
-              <Paper radius="sm" p="lg" className="empty-state">
+              <Paper radius="sm" px="md" py="lg" className="empty-state">
                 <Text fw={700}>No talks selected yet</Text>
                 <Text size="sm" c="dimmed">
                   Tap the star on any session to build your own schedule.
@@ -387,7 +438,8 @@ export default function App() {
                           <Card
                             key={session.id}
                             radius="sm"
-                            padding="md"
+                            px="sm"
+                            py="md"
                             className="pick-card"
                           >
                             <Stack gap="xs">
@@ -459,6 +511,11 @@ export default function App() {
                                 {session.speaker ? (
                                   <Text size="sm" c="dimmed">
                                     {session.speaker}
+                                  </Text>
+                                ) : null}
+                                {session.room ? (
+                                  <Text size="sm" c="dimmed">
+                                    {session.room}
                                   </Text>
                                 ) : null}
                               </Group>
@@ -542,7 +599,8 @@ export default function App() {
                   <Paper
                     key={slot.key}
                     radius="sm"
-                    p="md"
+                    px="sm"
+                    py="md"
                     className="slot-panel"
                   >
                     <Group
@@ -586,7 +644,8 @@ export default function App() {
                               <Card
                                 key={session.id}
                                 radius="sm"
-                                padding="lg"
+                                px="md"
+                                py="lg"
                                 className="session-card"
                                 style={{
                                   borderColor: `${track.color}55`,
@@ -681,6 +740,11 @@ export default function App() {
                                     {session.speaker ? (
                                       <Text fw={600} size="sm">
                                         {session.speaker}
+                                      </Text>
+                                    ) : null}
+                                    {session.room ? (
+                                      <Text size="sm" c="dimmed">
+                                        {session.room}
                                       </Text>
                                     ) : null}
                                   </Group>
