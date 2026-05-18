@@ -8,9 +8,30 @@
       name="description"
       content="Mobile-first conference planner for choosing talks and keeping a personal agenda on this device."
     />
+    <script>
+      (() => {
+        const storageKey = 'sdd-planner:color-scheme';
+        const storedValue = window.localStorage.getItem(storageKey);
+        const colorScheme =
+          storedValue === 'light' || storedValue === 'dark' || storedValue === 'auto'
+            ? storedValue
+            : 'auto';
+        const resolvedColorScheme =
+          colorScheme === 'auto'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light'
+            : colorScheme;
+
+        document.documentElement.setAttribute(
+          'data-mantine-color-scheme',
+          resolvedColorScheme,
+        );
+      })();
+    </script>
     <title>SDD Agenda Planner</title>
-    <script type="module" crossorigin src="/my-sdd/assets/index-BhTcxu1p.js"></script>
-    <link rel="stylesheet" crossorigin href="/my-sdd/assets/index-B84DbA6_.css">
+    <script type="module" crossorigin src="/my-sdd/assets/index-BpvjDHqm.js"></script>
+    <link rel="stylesheet" crossorigin href="/my-sdd/assets/index-DFZU_kym.css">
   <link rel="manifest" href="/my-sdd/manifest.webmanifest"></head>
   <body>
     <div id="app"></div>
